@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera @RobinGoldwing
 Created: 25/11/2023
 Last Modified: 25/11/2023
-Version: 0.1.8 - REFACTORING Unificar las funciones de consulta de sevicios y externalizar la configuración de servicios y los nombres propios asociados
+Version: 0.1.9 - FINAL REFACTORING Unificar las funciones de consulta de sevicios y externalizar la configuración de servicios y los nombres propios asociados
 
 
 Description:
@@ -55,7 +55,15 @@ import csv
 import sys
 from datetime import datetime
 
-# CONFIGURACIÓN DE ATRIBUTOS PARA DIFERENTES SERVICIOS AWS
+"""
+-------------------------------------------------------------------------------
+SERVICES & ATTR. CONFIGURATION
+-------------------------------------------------------------------------------
+"""
+# MODIFICAR estas listas para incluir o eliminar attributos a exportar en CSV a
+#  traves de comentar o añadirlos
+###############################################################################
+
 ATTRIBUTES_CONFIG = {
     "lambda": ['FunctionName', 'Runtime', 'Timeout', 'MemorySize', 'FunctionArn', 'Role'],
     "stepfunctions": ['name', 'stateMachineArn', 'creationDate'],
@@ -67,7 +75,34 @@ ATTRIBUTES_CONFIG = {
     "glue": ['Name', 'Role', 'CreatedOn', 'LastModifiedOn', 'MaxRetries', 'AllocatedCapacity', 'Timeout', 'MaxCapacity', 'WorkerType', 'NumberOfWorkers', 'GlueVersion']
 }
 
-# FUNCIÓN GENÉRICA DE LISTADO
+
+# Crear clientes de AWS
+clients = {
+    "lambda": boto3.client('lambda'),
+    "stepfunctions": boto3.client('stepfunctions'),
+    "eventbridge": boto3.client('events'),
+    "s3": boto3.client('s3'),
+    "dms": boto3.client('dms'),
+    "glue": boto3.client('glue')
+}
+
+# Configuración de recursos
+resources_config = {
+    "-lmb": ("lambda_functions.csv", "lambda", "list_functions", "Functions"),
+    "-sf": ("step_functions.csv", "stepfunctions", "list_state_machines", "stateMachines"),
+    "-eb": ("eventbridge_rules.csv", "eventbridge", "list_rules", "Rules"),
+    "-s3": ("s3_buckets.csv", "s3", "list_buckets", "Buckets"),
+    "-ds": ("dms_tasks.csv", "dms", "describe_replication_tasks", "ReplicationTasks"),
+    "-glue": ("glue_jobs.csv", "glue", "get_jobs", "Jobs")
+}
+
+"""
+--------------------------------------------------------------------------------
+FUNCTIONS DEFINITION
+--------------------------------------------------------------------------------
+"""
+
+# FUNCTION - Devuelve una lista con los recursos del servicio 
 def list_aws_resources(client, list_method, response_key, attributes):
     try:
         response = getattr(client, list_method)()
@@ -78,7 +113,13 @@ def list_aws_resources(client, list_method, response_key, attributes):
         print(f"Error al listar recursos: {e}")
         return []
 
-# FUNCIONES PARA EXPORTACIÓN Y MANEJO DE ARCHIVOS
+"""
+--------------------------------------------------------------------------------
+HELPER FUNCTIONS
+--------------------------------------------------------------------------------
+"""
+
+# FUNCTION - Exporta en formato CSV
 def export_to_csv(data, filename, headers):
     with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
@@ -86,59 +127,54 @@ def export_to_csv(data, filename, headers):
         for row in data:
             writer.writerow(row)
 
+# FUNCTION Crea un nombre unico con timestamp para tener un historico
 def create_unique_filename(base_filename):
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     return f"{base_filename.split('.')[0]}_{timestamp}.csv"
 
-# FUNCIÓN PRINCIPAL
+
+"""
+--------------------------------------------------------------------------------
+MAIN FUNCTION
+--------------------------------------------------------------------------------
+"""
+# FUNCTION - PRINCIPAL
 def main():
     args = sys.argv[1:]
 
-    # Crear clientes de AWS
-    clients = {
-        "lambda": boto3.client('lambda'),
-        "stepfunctions": boto3.client('stepfunctions'),
-        "eventbridge": boto3.client('events'),
-        "s3": boto3.client('s3'),
-        "dms": boto3.client('dms'),
-        "glue": boto3.client('glue')
-    }
-
-    # Configuración de recursos
-    resources_config = {
-        "-lmb": ("lambda_functions.csv", "lambda", "list_functions", "Functions"),
-        "-sf": ("step_functions.csv", "stepfunctions", "list_state_machines", "stateMachines"),
-        "-eb": ("eventbridge_rules.csv", "eventbridge", "list_rules", "Rules"),
-        "-s3": ("s3_buckets.csv", "s3", "list_buckets", "Buckets"),
-        "-ds": ("dms_tasks.csv", "dms", "describe_replication_tasks", "ReplicationTasks"),
-        "-glue": ("glue_jobs.csv", "glue", "get_jobs", "Jobs")
-    }
+    # Si esta el argumento -all agrega todos los recursos independientemente de los demas argumentos
+    if "-all" in args or len(args) == 0:
+        args = resources_config.keys()
 
     exported_resources = []
 
     for arg in args:
         if arg in resources_config:
-            print('>>> for : arg >>>', arg) #### TEST
+            # print('>>> for : arg >>>', arg) #### TEST
             filename, service, list_method, response_key = resources_config[arg]
-            print('>>> for : resources >>>',resources_config[arg] ) #### TEST
+            # print('>>> for : resources >>>',resources_config[arg] ) #### TEST
             client = clients[service]
-            print('>>> for : client >>>',client ) #### TEST
+            # print('>>> for : client >>>',client ) #### TEST
             attributes = ATTRIBUTES_CONFIG[service]
-            print('>>> for : Attrb. >>>',attributes ) #### TEST
+            # print('>>> for : Attrb. >>>',attributes ) #### TEST
             data = list_aws_resources(client, list_method, response_key, attributes)
             unique_filename = create_unique_filename(filename)
             export_to_csv(data, unique_filename, attributes)
-            exported_resources.append(unique_filename.split('_')[0])
+            exported_resources.append((unique_filename.split('_')[0],unique_filename))
 
     print("Recursos exportados:")
     for resource in exported_resources:
-        print(resource)
+        print(resource[0]," >>> File >>> ", resource[1])
+
+
+"""
+--------------------------------------------------------------------------------
+Script Execution
+--------------------------------------------------------------------------------
+"""
 
 if __name__ == '__main__':
     main()
-
-
-
 
 """
 --------------------------------------------------------------------------------
@@ -163,6 +199,7 @@ v0.1.5 - Ampliacion de la consulta de Lambdas
 v0.1.6 - HOTFIX - Ampliacion de la consulta de atributos y consultas
 v0.1.7 - HOTFIX - Ampliacion de la consulta de atributos y consultas
 v0.1.7a - TEST BRACH
+v0.1.8 - REFACTORING Unificar las funciones de consulta de sevicios y externalizar la configuración de servicios y los nombres propios asociados
 
 FUTURE FEATUREs:
 ==========================
@@ -171,7 +208,6 @@ FUTURE FEATUREs:
     - Se puede codificar en BASE64, pero eso gestionaría más eficientemente la longitud de archivo pero influiría en su legibilidad
     - Se puede sustitur y codificar los saltos de linea permitiendo una lectura directa del CSV, pero gestionará peor el tamaño el los datos del atributo/columna
     - Agregar posibilidad de que agregue los subdiccionarios como columnas nuevas (EJEMPLO DMSTasks>ReplicationTaskStats)
-- Unificar la función de servicios con una parte de configuración de servicios de consulta por AWS
 - Posibilidad de externalizar la configuracion a traves de un archivo config, para no tocar el codigo
 - Posibilidad de comprimir los archivos en ZIP
 - Subir el programa a un repositorio
