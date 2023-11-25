@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
 Created: 23/11/2023
 Last Modified: 23/11/2023
-Version: 0.1.2 - Feature - exporta a CSV
+Version: 0.1.3 - Feature - agrega más tipos de recursos
 
 Description:
     Este script automatiza la exportación de recursos AWS a archivos CSV.
@@ -27,10 +27,10 @@ Disclaimer:
 --------------------------------------------------------------------------------
 """
 
-
 import boto3
 import csv
 
+# Funcion exportar a CSV
 def export_to_csv(data, filename, headers):
     with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
@@ -38,6 +38,7 @@ def export_to_csv(data, filename, headers):
         for row in data:
             writer.writerow(row)
 
+# Funcion listar lambdas
 def list_lambda_functions(lambda_client):
     functions = lambda_client.list_functions()
     function_list = []
@@ -49,10 +50,10 @@ def list_lambda_functions(lambda_client):
     return function_list
 
 def main():
-    # Crear cliente para Lambda
+    # Crear cliente 
     lambda_client = boto3.client('lambda')
 
-    # Listar funciones de Lambda
+    # Listar
     lambda_functions = list_lambda_functions(lambda_client)
 
     # Exportar a CSV
