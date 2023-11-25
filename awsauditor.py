@@ -2,9 +2,9 @@
 --------------------------------------------------------------------------------
 Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
-Created: 24/11/2023
-Last Modified: 24/11/2023
-Version: 0.1.6a - HOTFIX - Ampliacion de la consulta de atributos y consultas
+Created: 25/11/2023
+Last Modified: 25/11/2023
+Version: 0.1.7 - HOTFIX - Ampliacion de la consulta de atributos y consultas
 
 Description:
     Este script automatiza la exportacion de recursos AWS a archivos CSV.
@@ -63,23 +63,18 @@ FUNCTIONS DEFINITION
 # COMENTADA
 lambda_attr = [
     'FunctionName',
-    'FunctionArn',
-    'Role',
     'Runtime', 
     'Timeout',
-    'MemorySize'
+    'MemorySize',
+    'FunctionArn',
+    'Role',
 ]
 
 def list_lambda_functions(lambda_client):
     functions = lambda_client.list_functions()
-    function_list = []
-    for f in functions['Functions']:
-        intra_list = []
-        for lmb in lambda_attr:
-            lmb_value = f.get(lmb, 'N/A')
-            intra_list.append(lmb_value)
-        function_list.append(intra_list)
-    print(function_list)
+    function_list = [
+        [f.get(attr, 'N/A') for attr in lambda_attr] for f in functions['Functions']
+    ]
     return function_list
 
 ######################################################################
@@ -89,12 +84,13 @@ sf_attr = [
     'stateMachineArn',
     'creationDate',
 ]
+
+
 def list_step_functions(sf_client):
     state_machines = sf_client.list_state_machines()
-    sf_list = []
-    for sm in state_machines['stateMachines']:
-        row = [sm.get(attr, 'N/A') for attr in sf_attr]
-        sf_list.append(row)
+    sf_list = [
+        [f.get(attr, 'N/A') for attr in sf_attr] for f in state_machines['stateMachines']
+    ]
     return sf_list
 
 # FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
@@ -277,6 +273,7 @@ v0.1.2 - Feature - exporta a CSV
 v0.1.3 - Feature - agrega más tipos de recursos
 v0.1.4 - Feature - agrega funcionalidad de argumentos
 v0.1.5 - Ampliacion de la consulta de Lambdas
+v0.1.6 - HOTFIX - Ampliacion de la consulta de atributos y consultas
 
 POSIBLES FEATURES FUTURAS:
 ==========================
