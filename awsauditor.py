@@ -167,6 +167,7 @@ glue_config = { # Configuracion del servicio de AWS
     "attributes": glue_attr
 }
 
+
 """
 --------------------------------------------------------------------------------
 FUNCTIONS DEFINITION
@@ -174,7 +175,6 @@ FUNCTIONS DEFINITION
 """
 
 # FUNCTION - Devuelve una lista de Lambda y sus configuraciones
-# COMENTADA
 
 def list_lambda_functions(lambda_client):
 
@@ -184,8 +184,7 @@ def list_lambda_functions(lambda_client):
     ]
     return function_list
 
-######################################################################
-
+# FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
 
 def list_step_functions(sf_client):
     state_machines = sf_client.list_state_machines()
@@ -229,10 +228,33 @@ def list_dms_tasks(dms_client):
 def list_glue_jobs(glue_client):
     jobs = glue_client.get_jobs()
     glue_list = [
-        [glu.get(attr, 'N/A') for attr in dms_attr] for glu in jobs['Jobs']
+        [glu.get(attr, 'N/A') for attr in glue_attr] for glu in jobs['Jobs']
     ]
     return glue_list
 
+"""
+-------------------------------------------------------------------------------
+ARGS. CONFIGURATION & GENERAL EXPORT NAMING
+-------------------------------------------------------------------------------
+"""
+
+# Crear clientes de AWS dependiendo del recurso(s)
+lambda_client = boto3.client('lambda')
+sf_client = boto3.client('stepfunctions')
+events_client = boto3.client('events')
+s3_client = boto3.client('s3')
+dms_client = boto3.client('dms')
+glue_client = boto3.client('glue')
+
+# Aqui podremos asignar el argumento, y nombre de la exportacion
+all_resources = {
+    "-lmb": (lambda_client, list_lambda_functions, 'lambda_functions.csv', lambda_attr),
+    "-sf": (sf_client, list_step_functions, 'step_functions.csv', sf_attr),
+    "-eb": (events_client, list_eventbridge_rules, 'eventbridge_rules.csv', eb_attr),
+    "-s3": (s3_client, list_s3_buckets, 's3_buckets.csv', bucket_attr),
+    "-ds": (dms_client, list_dms_tasks, 'dms_tasks.csv', dms_attr),
+    "-glue": (glue_client, list_glue_jobs, 'glue_jobs.csv', glue_attr)
+}
 """
 --------------------------------------------------------------------------------
 HELPER FUNCTIONS
@@ -271,23 +293,7 @@ def main():
     # Argumentos con los que se ejecuta el script de Python o que le llega desde el script de bash
     args = sys.argv[1:]
 
-    # Crear clientes de AWS dependiendo del recurso(s)
-    lambda_client = boto3.client('lambda')
-    sf_client = boto3.client('stepfunctions')
-    events_client = boto3.client('events')
-    s3_client = boto3.client('s3')
-    dms_client = boto3.client('dms')
-    glue_client = boto3.client('glue')
 
-    # Aqui podremos asignar el argumento, y nombre de la exportacion
-    all_resources = {
-        "-lmb": (lambda_client, list_lambda_functions, 'lambda_functions.csv', lambda_attr),
-        "-sf": (sf_client, list_step_functions, 'step_functions.csv', sf_attr),
-        "-eb": (events_client, list_eventbridge_rules, 'eventbridge_rules.csv', eb_attr),
-        "-s3": (s3_client, list_s3_buckets, 's3_buckets.csv', bucket_attr),
-        "-ds": (dms_client, list_dms_tasks, 'dms_tasks.csv', dms_attr),
-        "-glue": (glue_client, list_glue_jobs, 'glue_jobs.csv', glue_attr)
-    }
 
     # Creamos variable de expotacion
     exported_resources = []
