@@ -1,44 +1,49 @@
 """
 --------------------------------------------------------------------------------
 Script Name: AWS Auditor
-Author: Ruben Alvarez Mosquera @RobinGoldwing
+Author: Ruben Alvarez Mosquera AKA GitHub@RobinGoldwing
 Created: 25/11/2023
 Last Modified: 25/11/2023
-Version: 0.1.9 - FINAL REFACTORING Unificar las funciones de consulta de sevicios y externalizar la configuración de servicios y los nombres propios asociados
 
+Version: 
+    v0.2 - STABLE VERSION
 
 Description:
-    Este script automatiza la exportacion de recursos AWS a archivos CSV.
-    Soporta multiples servicios como Lambda, Step Functions, EventBridge, etc.
+    This script automates the export of AWS resources to CSV files.
+    Supports multiple services including Lambda, Step Functions, EventBridge, etc.
 
-Usage:
-    bash execute-scriptpython.sh scriptPython.py [options]
+Usage :
+    Usage Bash   >>>  bash start-awsauditor.sh [options]
+    Usage Python >>>  python3 awsauditor.py [options]
 
 Options:
-    -all  : Exporta todos los recursos
-    -lmb  : Exporta Lambda functions
-    -sf   : Exporta Step Functions
-    -eb   : Exporta EventBridge rules
-    -s3   : Exporta S3 buckets
-    -ds   : Exporta DMS Tasks
-    -glue : Exporta Glue Jobs
+    -all  : Exports all resources
+    -lmb  : Exports Lambda functions
+    -sf   : Exports Step Functions
+    -eb   : Exports EventBridge rules
+    -s3   : Exports S3 buckets
+    -ds   : Exports DMS Tasks
+    -glue : Exports Glue Jobs
+
 
 
 License:
-    Copyright MIT 2023 by Ruben Alvarez Mosquera.
-    Se concede permiso, de forma gratuita, a cualquier persona que obtenga una copia
-    de este software y de los archivos de documentacion asociados (el "Software"), para
-    utilizar el Software sin restriccion, incluyendo sin limitacion los derechos
-    de usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar, y/o vender
-    copias del Software, y para permitir a las personas a las que se les proporcione el
-    Software hacer lo mismo, siempre que se incluya el siguiente aviso de derechos de autor
-    y este aviso de permiso en todas las copias o partes sustanciales del Software.
+    Copyright (c) MIT 2023 by Ruben Alvarez Mosquera AKA GitHub@RobinGoldwing
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
 Disclaimer:
-    Este script se proporciona "tal cual", sin garantia de ningun tipo, expresa o
-    implicita. El uso de este script es bajo tu propio riesgo.
+    This script is provided "as is", without warranty of any kind, express or
+    implied. Use of this script is at your own risk.
 
-Music, Keep Calm & CODE!! @RobinGoldwing
+
+Music, Keep Calm & CODE!! // GitHub@RobinGoldwing
 
 --------------------------------------------------------------------------------
 """
@@ -86,7 +91,7 @@ clients = {
     "glue": boto3.client('glue')
 }
 
-# Configuración de recursos
+# Configuracion de recursos
 resources_config = {
     "-lmb": ("lambda_functions.csv", "lambda", "list_functions", "Functions"),
     "-sf": ("step_functions.csv", "stepfunctions", "list_state_machines", "stateMachines"),
@@ -190,30 +195,32 @@ End of Script
 --------------------------------------------------------------------------------
 OLD VERSIONs:
 =============
-v0.1.0 - Simple consulta de lista de lambdas y exportación a JSON
-v0.1.1 - Feature - exporta también Buckets S3
-v0.1.2 - Feature - exporta a CSV
-v0.1.3 - Feature - agrega más tipos de recursos
-v0.1.4 - Feature - agrega funcionalidad de argumentos
-v0.1.5 - Ampliacion de la consulta de Lambdas
-v0.1.6 - HOTFIX - Ampliacion de la consulta de atributos y consultas
-v0.1.7 - HOTFIX - Ampliacion de la consulta de atributos y consultas
+
+## OLD VERSIONS:
+=============
+v0.1.0 - Simple lambdas list query and export to JSON
+v0.1.1 - Feature - export also S3 Buckets
+v0.1.2 - Feature - export to CSV
+v0.1.3 - Feature - add more resource types
+v0.1.4 - Feature - adds arguments functionality
+v0.1.5 - Lambdas query enhancement
+v0.1.6 - HOTFIX - Attribute and query query query extension
+v0.1.7 - HOTFIX - Attribute and query query query extension
 v0.1.7a - TEST BRACH
-v0.1.8 - REFACTORING Unificar las funciones de consulta de sevicios y externalizar la configuración de servicios y los nombres propios asociados
+v0.1.7b - TEST BRACH
+v0.1.7c - STABLE VERSION
+v0.1.8 - REFACTORING Unify service query functions and externalize service configuration and associated proper nouns
+v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
 
-FUTURE FEATUREs:
-==========================
-- HOTFIX > Arreglar DMSTask ya que el atributo TableMappings viene en formato JSON
-    - De momento queda INACTIVO
-    - Se puede codificar en BASE64, pero eso gestionaría más eficientemente la longitud de archivo pero influiría en su legibilidad
-    - Se puede sustitur y codificar los saltos de linea permitiendo una lectura directa del CSV, pero gestionará peor el tamaño el los datos del atributo/columna
-    - Agregar posibilidad de que agregue los subdiccionarios como columnas nuevas (EJEMPLO DMSTasks>ReplicationTaskStats)
-- Posibilidad de externalizar la configuracion a traves de un archivo config, para no tocar el codigo
-- Posibilidad de comprimir los archivos en ZIP
-- Subir el programa a un repositorio
-        - crear script de bash adecuado generado por un excel para únicamente pegarlo en la consola y lanzarlo
-        - baje el repositorio y active el comando asociado a la elección de argumentos
-
+## FUTURE FEATUREs:
+================
+- FEATURE - Added ability to compress files into ZIP format, with a new argument
+- Possibility to externalize the configuration through a config file, so as not to touch the code.
+- HOTFIX > Fix DMSTask since the TableMappings attribute comes in JSON format.
+    - For the moment it is INACTIVE
+    - It is possible to encode in BASE64, but this would manage file length more efficiently but would affect readability.
+    - Line breaks can be replaced and encoded allowing a direct reading of the CSV, but it will handle the size of the attribute/column data worse.
+    - Add the possibility to add the sub-divisions as new columns (EXAMPLE DMSTasks>ReplicationTaskStats)
 
 Music, Keep Calm & CODE!! @RobinGoldwing
 
