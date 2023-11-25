@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
 Created: 25/11/2023
 Last Modified: 25/11/2023
-Version: 0.1.7 - HOTFIX - Ampliacion de la consulta de atributos y consultas
+Version: 0.1.7a - TEST BRACH
 
 Description:
     Este script automatiza la exportacion de recursos AWS a archivos CSV.
@@ -54,14 +54,16 @@ import sys
 from datetime import datetime
 
 """
---------------------------------------------------------------------------------
-FUNCTIONS DEFINITION
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+SERVICES & ATTR. CONFIGURATION
+-------------------------------------------------------------------------------
 """
+# MODIFICAR estas listas para incluir o eliminar attributos a exportar en CSV a
+#  traves de comentar o añadirlos
+###############################################################################
 
-# FUNCTION - Devuelve una lista de Lambda y sus configuraciones
-# COMENTADA
-lambda_attr = [
+# LAMBDA
+lambda_attr = [ # Configuracion de atributos de funciones LAMBDA 
     'FunctionName',
     'Runtime', 
     'Timeout',
@@ -69,83 +71,83 @@ lambda_attr = [
     'FunctionArn',
     'Role',
 ]
+lambda_config = { # Configuracion del servicio de AWS
+    "client": boto3.client('lambda'),
+    "list_method": "list_functions",
+    "response_key": "Functions",
+    "attributes": lambda_attr
+}
 
-def list_lambda_functions(lambda_client):
-    functions = lambda_client.list_functions()
-    function_list = [
-        [f.get(attr, 'N/A') for attr in lambda_attr] for f in functions['Functions']
-    ]
-    return function_list
+# STEP FUNCTION CONFIG ########################################################
 
-######################################################################
-
-sf_attr = [
+sf_attr = [ # Configuracion de atributos de StepFunctions
     'name',
     'stateMachineArn',
     'creationDate',
 ]
+sf_config = { # Configuracion del servicio de AWS
+    "client": boto3.client('stepfunctions'),
+    "list_method": "list_state_machines",
+    "response_key": "stateMachines",
+    "attributes": sf_attr
+}
 
+# EVENT BRIDGE CONFIG #########################################################
 
-def list_step_functions(sf_client):
-    state_machines = sf_client.list_state_machines()
-    sf_list = [
-        [f.get(attr, 'N/A') for attr in sf_attr] for f in state_machines['stateMachines']
-    ]
-    return sf_list
-
-# FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
-
-eb_attr = [
+eb_attr = [ # Configuracion de atributos de EventBridge
     'Name',
     'Arn',
     'ScheduleExpression',
     'State',
     'Description',
 ]
-def list_eventbridge_rules(events_client):
-    rules = events_client.list_rules()
-    eb_list = []
-    for rule in rules['Rules']:
-        row = [rule.get(attr, 'N/A') for attr in eb_attr]
-        eb_list.append(row)
-    return eb_list
+eb_config = { # Configuracion del servicio de AWS
+    "client": boto3.client('events'),
+    "list_method": "list_rules",
+    "response_key": "Rules",
+    "attributes": eb_attr
+}
 
-# FUNCTION - Devuelve una lista de S3 Buckets y sus configuraciones
+# S3 BUCKETS CONFIG ###########################################################
 
-bucket_attr = [
+bucket_attr = [  # Configuracion de atributos de Buckets de s3
     'Name',
     'CreationDate',
 ]
-def list_s3_buckets(s3_client):
-    buckets = s3_client.list_buckets()
-    bucket_list = []
-    for bucket in buckets['Buckets']:
-        row = [bucket.get(attr, 'N/A') for attr in bucket_attr]
-        bucket_list.append(row)
-    return bucket_list
 
-# FUNCTION - Devuelve una lista de DMS Tasks y sus configuraciones
+bucket_config = { # Configuracion del servicio de AWS
+    "client": boto3.client('s3'),
+    "list_method": "list_buckets",
+    "response_key": "Buckets",
+    "attributes": bucket_attr
+}
 
-dms_attr = [
+# DMSTasks CONFIG ###########################################################
+
+dms_attr = [ # Configuracion de atributos de DMS Tasks
     'ReplicationTaskIdentifier',
     'Status',
     'ReplicationTaskArn',
     'StopReason'
     'LastFailureMessage',
-    'TableMappings',
+    #'TableMappings',
+]   
+# - HOTFIX > Arreglar DMSTask ya que el atributo TableMappings viene en formato JSON
+#     - De momento queda INACTIVO
+#     - Se puede codificar en BASE64, pero eso gestionaría más eficientemente la longitud de archivo pero influiría en su legibilidad
+#     - Se puede sustitur y codificar los saltos de linea permitiendo una lectura directa del CSV, pero gestionará peor el tamaño el los datos del atributo/columna
+#     - Agregar posibilidad de que agregue los subdiccionarios como columnas nuevas (EJEMPLO DMSTasks>ReplicationTaskStats)
 
-]
-def list_dms_tasks(dms_client):
-    tasks = dms_client.describe_replication_tasks()
-    dms_list = []
-    for task in tasks['ReplicationTasks']:
-        row = [task.get(attr, 'N/A') for attr in dms_attr]
-        dms_list.append(row)
-    return dms_list
+dms_config = {
+    "client": boto3.client('dms'),
+    "list_method": "describe_replication_tasks",
+    "response_key": "ReplicationTasks",
+    "attributes": dms_attr
+}
 
-# FUNCTION - Devuelve una lista de Jobs de Glue y sus configuraciones
+# GLUE JOBS CONFIG ###########################################################
 
-glue_attr = [
+glue_attr = [ # Configuracion de atributos de Jobs de Glue
     'Name',
     'Role',
     'CreatedOn',
@@ -158,12 +160,77 @@ glue_attr = [
     'NumberOfWorkers',
     'GlueVersion',
 ]
+glue_config = { # Configuracion del servicio de AWS
+    "client": boto3.client('glue'),
+    "list_method": "get_jobs",
+    "response_key": "Jobs",
+    "attributes": glue_attr
+}
+
+"""
+--------------------------------------------------------------------------------
+FUNCTIONS DEFINITION
+--------------------------------------------------------------------------------
+"""
+
+# FUNCTION - Devuelve una lista de Lambda y sus configuraciones
+# COMENTADA
+
+def list_lambda_functions(lambda_client):
+
+    functions = lambda_client.list_functions()
+    function_list = [
+        [f.get(attr, 'N/A') for attr in lambda_attr] for f in functions['Functions']
+    ]
+    return function_list
+
+######################################################################
+
+
+def list_step_functions(sf_client):
+    state_machines = sf_client.list_state_machines()
+    sf_list = [
+        [sf.get(attr, 'N/A') for attr in sf_attr] for sf in state_machines['stateMachines']
+    ]
+    return sf_list
+
+# FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
+
+def list_eventbridge_rules(events_client):
+    rules = events_client.list_rules()
+    eb_list = [
+        [eb.get(attr, 'N/A') for attr in eb_attr] for eb in rules['Rules']
+    ]
+    return eb_list
+
+# FUNCTION - Devuelve una lista de S3 Buckets y sus configuraciones
+
+
+def list_s3_buckets(s3_client):
+    buckets = s3_client.list_buckets()
+    bucket_list = [
+        [bu.get(attr, 'N/A') for attr in bucket_attr] for bu in buckets['Buckets']
+    ]
+    return bucket_list
+
+# FUNCTION - Devuelve una lista de DMS Tasks y sus configuraciones
+
+
+def list_dms_tasks(dms_client):
+    tasks = dms_client.describe_replication_tasks()
+    dms_list = [
+        [dms.get(attr, 'N/A') for attr in dms_attr] for dms in tasks['ReplicationTasks']
+    ]
+    return dms_list
+
+# FUNCTION - Devuelve una lista de Jobs de Glue y sus configuraciones
+
+
 def list_glue_jobs(glue_client):
     jobs = glue_client.get_jobs()
-    glue_list = []
-    for job in jobs['Jobs']:
-        row = [job.get(attr, 'N/A') for attr in glue_attr]
-        glue_list.append(row)
+    glue_list = [
+        [glu.get(attr, 'N/A') for attr in dms_attr] for glu in jobs['Jobs']
+    ]
     return glue_list
 
 """
