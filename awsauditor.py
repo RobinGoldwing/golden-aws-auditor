@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
 Created: 25/11/2023
 Last Modified: 25/11/2023
-Version: 0.1.7a - TEST BRACH
+Version: 0.1.7c - TEST BRACH
 
 Description:
     Este script automatiza la exportacion de recursos AWS a archivos CSV.
@@ -173,6 +173,20 @@ glue_config = { # Configuracion del servicio de AWS
 FUNCTIONS DEFINITION
 --------------------------------------------------------------------------------
 """
+############################################################
+
+# FUNCIÓN GENÉRICA DE LISTADO
+def list_aws_resources(client, list_method, response_key, attributes):
+    try:
+        response = getattr(client, list_method)()
+        return [
+            [resource.get(attr, 'N/A') for attr in attributes] for resource in response[response_key]
+        ]
+    except Exception as e:
+        print(f"Error al listar recursos: {e}")
+        return []
+    
+############################################################
 
 # FUNCTION - Devuelve una lista de Lambda y sus configuraciones
 
@@ -255,6 +269,8 @@ all_resources = {
     "-ds": (dms_client, list_dms_tasks, 'dms_tasks.csv', dms_attr),
     "-glue": (glue_client, list_glue_jobs, 'glue_jobs.csv', glue_attr)
 }
+
+
 """
 --------------------------------------------------------------------------------
 HELPER FUNCTIONS
@@ -292,8 +308,6 @@ MAIN FUNCTION
 def main():
     # Argumentos con los que se ejecuta el script de Python o que le llega desde el script de bash
     args = sys.argv[1:]
-
-
 
     # Creamos variable de expotacion
     exported_resources = []
