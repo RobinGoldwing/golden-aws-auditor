@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
 Created: 24/11/2023
 Last Modified: 24/11/2023
-Version: 0.1.6 - HOTFIX - Ampliacion de la consulta de atributos y consultas
+Version: 0.1.6a - HOTFIX - Ampliacion de la consulta de atributos y consultas
 
 Description:
     Este script automatiza la exportacion de recursos AWS a archivos CSV.
@@ -63,112 +63,112 @@ FUNCTIONS DEFINITION
 # COMENTADA
 lambda_attr = [
     'FunctionName',
-#    'FunctionArn',
-#    'Role',
+    'FunctionArn',
+    'Role',
     'Runtime', 
-#    'Timeout',
+    'Timeout',
     'MemorySize'
 ]
 
 def list_lambda_functions(lambda_client):
     functions = lambda_client.list_functions()
     function_list = []
-    intra_list = []
     for f in functions['Functions']:
+        intra_list = []
         for lmb in lambda_attr:
-            lmb = f.get(lmb, 'N/A')
-            intra_list.append(lmb)
-        function_list.append((intra_list))
+            lmb_value = f.get(lmb, 'N/A')
+            intra_list.append(lmb_value)
+        function_list.append(intra_list)
     print(function_list)
     return function_list
 
 ######################################################################
 
+sf_attr = [
+    'name',
+    'stateMachineArn',
+    'creationDate',
+]
 def list_step_functions(sf_client):
     state_machines = sf_client.list_state_machines()
     sf_list = []
-    sf_attr = [
-        'name',
-        'stateMachineArn',
-        'creationDate',
-    ]
     for sm in state_machines['stateMachines']:
         row = [sm.get(attr, 'N/A') for attr in sf_attr]
         sf_list.append(row)
-    return sf_list, sf_attr
+    return sf_list
 
 # FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
 
+eb_attr = [
+    'Name',
+    'Arn',
+    'ScheduleExpression',
+    'State',
+    'Description',
+]
 def list_eventbridge_rules(events_client):
     rules = events_client.list_rules()
     eb_list = []
-    eb_attr = [
-        'Name',
-        'Arn',
-        'ScheduleExpression',
-        'State',
-        'Description',
-    ]
     for rule in rules['Rules']:
         row = [rule.get(attr, 'N/A') for attr in eb_attr]
         eb_list.append(row)
-    return eb_list, eb_attr
+    return eb_list
 
 # FUNCTION - Devuelve una lista de S3 Buckets y sus configuraciones
 
+bucket_attr = [
+    'Name',
+    'CreationDate',
+]
 def list_s3_buckets(s3_client):
     buckets = s3_client.list_buckets()
     bucket_list = []
-    bucket_attr = [
-        'Name',
-        'CreationDate',
-    ]
     for bucket in buckets['Buckets']:
         row = [bucket.get(attr, 'N/A') for attr in bucket_attr]
         bucket_list.append(row)
-    return bucket_list, bucket_attr
+    return bucket_list
 
 # FUNCTION - Devuelve una lista de DMS Tasks y sus configuraciones
 
+dms_attr = [
+    'ReplicationTaskIdentifier',
+    'Status',
+    'ReplicationTaskArn',
+    'StopReason'
+    'LastFailureMessage',
+    'TableMappings',
+
+]
 def list_dms_tasks(dms_client):
     tasks = dms_client.describe_replication_tasks()
     dms_list = []
-    dms_attr = [
-        'ReplicationTaskIdentifier',
-        'Status',
-        'ReplicationTaskArn',
-        'StopReason'
-        'LastFailureMessage',
-        'TableMappings',
-
-    ]
     for task in tasks['ReplicationTasks']:
         row = [task.get(attr, 'N/A') for attr in dms_attr]
         dms_list.append(row)
-    return dms_list, dms_attr
+    return dms_list
 
 # FUNCTION - Devuelve una lista de Jobs de Glue y sus configuraciones
 
+glue_attr = [
+    'Name',
+    'Role',
+    'CreatedOn',
+    'LastModifiedOn',
+    'MaxRetries',
+    'AllocatedCapacity',
+    'Timeout',
+    'MaxCapacity',
+    'WorkerType',
+    'NumberOfWorkers',
+    'GlueVersion',
+]
 def list_glue_jobs(glue_client):
     jobs = glue_client.get_jobs()
     glue_list = []
-    glue_attr = [
-        'Name',
-        'Role',
-        'CreatedOn',
-        'LastModifiedOn',
-        'MaxRetries',
-        'AllocatedCapacity',
-        'Timeout',
-        'MaxCapacity',
-        'WorkerType',
-        'NumberOfWorkers',
-        'GlueVersion',
-    ]
     for job in jobs['Jobs']:
         row = [job.get(attr, 'N/A') for attr in glue_attr]
         glue_list.append(row)
-    return glue_list, glue_attr
+    return glue_list
 
 """
 --------------------------------------------------------------------------------
@@ -219,11 +219,11 @@ def main():
     # Aqui podremos asignar el argumento, y nombre de la exportacion
     all_resources = {
         "-lmb": (lambda_client, list_lambda_functions, 'lambda_functions.csv', lambda_attr),
-        "-sf": (sf_client, list_step_functions, 'step_functions.csv'),
-        "-eb": (events_client, list_eventbridge_rules, 'eventbridge_rules.csv'),
-        "-s3": (s3_client, list_s3_buckets, 's3_buckets.csv'),
-        "-ds": (dms_client, list_dms_tasks, 'dms_tasks.csv'),
-        "-glue": (glue_client, list_glue_jobs, 'glue_jobs.csv')
+        "-sf": (sf_client, list_step_functions, 'step_functions.csv', sf_attr),
+        "-eb": (events_client, list_eventbridge_rules, 'eventbridge_rules.csv', eb_attr),
+        "-s3": (s3_client, list_s3_buckets, 's3_buckets.csv', bucket_attr),
+        "-ds": (dms_client, list_dms_tasks, 'dms_tasks.csv', dms_attr),
+        "-glue": (glue_client, list_glue_jobs, 'glue_jobs.csv', glue_attr)
     }
 
     # Creamos variable de expotacion
