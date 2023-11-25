@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
 Created: 23/11/2023
 Last Modified: 23/11/2023
-Version: 0.1.1  - Feature - exporta también Buckets S3
+Version: 0.1.2 - Feature - exporta a CSV
 
 Description:
     Este script automatiza la exportación de recursos AWS a archivos CSV.
@@ -40,25 +40,23 @@ def export_to_csv(data, filename, headers):
 
 def list_lambda_functions(lambda_client):
     functions = lambda_client.list_functions()
-    print(functions)
-    return # [(f['FunctionName'], f['Runtime'], f['MemorySize']) for f in functions['Functions']]
-
-# def list_s3_buckets(s3_client):
-#    response = s3_client.list_buckets()
-#    return [(bucket['Name'],) for bucket in response['Buckets']]
+    function_list = []
+    for f in functions['Functions']:
+        function_name = f.get('FunctionName', 'N/A')
+        runtime = f.get('Runtime', 'N/A')
+        memory_size = f.get('MemorySize', 'N/A')
+        function_list.append((function_name, runtime, memory_size))
+    return function_list
 
 def main():
-    # Crear clientes para cada servicio
+    # Crear cliente para Lambda
     lambda_client = boto3.client('lambda')
-    # s3_client = boto3.client('s3')
 
-    # Listar funciones de Lambda y buckets de S3
+    # Listar funciones de Lambda
     lambda_functions = list_lambda_functions(lambda_client)
-    # s3_buckets = list_s3_buckets(s3_client)
 
     # Exportar a CSV
-    # export_to_csv(lambda_functions, 'lambda_functions.csv', ['FunctionName', 'Runtime', 'MemorySize'])
-    # export_to_csv(s3_buckets, 's3_buckets.csv', ['BucketName'])
+    export_to_csv(lambda_functions, 'lambda_functions.csv', ['FunctionName', 'Runtime', 'MemorySize'])
 
 if __name__ == '__main__':
     main()
