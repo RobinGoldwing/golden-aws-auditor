@@ -1,10 +1,11 @@
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 Script Name: AWS Auditor
-Author: Ruben Alvarez Mosquera
+Author: Ruben Alvarez Mosquera @RobinGoldwing
 Created: 25/11/2023
 Last Modified: 25/11/2023
-Version: 0.1.7c - TEST BRACH
+Version: 0.1.8 - REFACTORING Unificar las funciones de consulta de sevicios y externalizar la configuración de servicios y los nombres propios asociados
+
 
 Description:
     Este script automatiza la exportacion de recursos AWS a archivos CSV.
@@ -37,15 +38,15 @@ Disclaimer:
     Este script se proporciona "tal cual", sin garantia de ningun tipo, expresa o
     implicita. El uso de este script es bajo tu propio riesgo.
 
-Music, Keep Calm & CODE!!
+Music, Keep Calm & CODE!! @RobinGoldwing
 
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
 
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 SCRIPT HEADER
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
 
 import boto3
@@ -78,7 +79,7 @@ lambda_config = { # Configuracion del servicio de AWS
     "attributes": lambda_attr
 }
 
-# STEP FUNCTION CONFIG ########################################################
+# STEP FUNCTION CONFIG #######################################
 
 sf_attr = [ # Configuracion de atributos de StepFunctions
     'name',
@@ -92,7 +93,7 @@ sf_config = { # Configuracion del servicio de AWS
     "attributes": sf_attr
 }
 
-# EVENT BRIDGE CONFIG #########################################################
+# EVENT BRIDGE CONFIG #######################################
 
 eb_attr = [ # Configuracion de atributos de EventBridge
     'Name',
@@ -108,7 +109,7 @@ eb_config = { # Configuracion del servicio de AWS
     "attributes": eb_attr
 }
 
-# S3 BUCKETS CONFIG ###########################################################
+# S3 BUCKETS CONFIG #######################################
 
 bucket_attr = [  # Configuracion de atributos de Buckets de s3
     'Name',
@@ -122,7 +123,7 @@ bucket_config = { # Configuracion del servicio de AWS
     "attributes": bucket_attr
 }
 
-# DMSTasks CONFIG ###########################################################
+# DMSTasks CONFIG #######################################
 
 dms_attr = [ # Configuracion de atributos de DMS Tasks
     'ReplicationTaskIdentifier',
@@ -145,7 +146,7 @@ dms_config = {
     "attributes": dms_attr
 }
 
-# GLUE JOBS CONFIG ###########################################################
+# GLUE JOBS CONFIG #######################################
 
 glue_attr = [ # Configuracion de atributos de Jobs de Glue
     'Name',
@@ -166,116 +167,59 @@ glue_config = { # Configuracion del servicio de AWS
     "response_key": "Jobs",
     "attributes": glue_attr
 }
-
-
-"""
---------------------------------------------------------------------------------
-FUNCTIONS DEFINITION
---------------------------------------------------------------------------------
-"""
-############################################################
-
-# FUNCIÓN GENÉRICA DE LISTADO
-def list_aws_resources(client, list_method, response_key, attributes):
-    try:
-        response = getattr(client, list_method)()
-        return [
-            [resource.get(attr, 'N/A') for attr in attributes] for resource in response[response_key]
-        ]
-    except Exception as e:
-        print(f"Error al listar recursos: {e}")
-        return []
-    
-############################################################
-
-# FUNCTION - Devuelve una lista de Lambda y sus configuraciones
-
-def list_lambda_functions(lambda_client):
-
-    functions = lambda_client.list_functions()
-    function_list = [
-        [f.get(attr, 'N/A') for attr in lambda_attr] for f in functions['Functions']
-    ]
-    return function_list
-
-# FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
-
-def list_step_functions(sf_client):
-    state_machines = sf_client.list_state_machines()
-    sf_list = [
-        [sf.get(attr, 'N/A') for attr in sf_attr] for sf in state_machines['stateMachines']
-    ]
-    return sf_list
-
-# FUNCTION - Devuelve una lista de EventBridge Rules y sus configuraciones
-
-def list_eventbridge_rules(events_client):
-    rules = events_client.list_rules()
-    eb_list = [
-        [eb.get(attr, 'N/A') for attr in eb_attr] for eb in rules['Rules']
-    ]
-    return eb_list
-
-# FUNCTION - Devuelve una lista de S3 Buckets y sus configuraciones
-
-
-def list_s3_buckets(s3_client):
-    buckets = s3_client.list_buckets()
-    bucket_list = [
-        [bu.get(attr, 'N/A') for attr in bucket_attr] for bu in buckets['Buckets']
-    ]
-    return bucket_list
-
-# FUNCTION - Devuelve una lista de DMS Tasks y sus configuraciones
-
-
-def list_dms_tasks(dms_client):
-    tasks = dms_client.describe_replication_tasks()
-    dms_list = [
-        [dms.get(attr, 'N/A') for attr in dms_attr] for dms in tasks['ReplicationTasks']
-    ]
-    return dms_list
-
-# FUNCTION - Devuelve una lista de Jobs de Glue y sus configuraciones
-
-
-def list_glue_jobs(glue_client):
-    jobs = glue_client.get_jobs()
-    glue_list = [
-        [glu.get(attr, 'N/A') for attr in glue_attr] for glu in jobs['Jobs']
-    ]
-    return glue_list
-
 """
 -------------------------------------------------------------------------------
 ARGS. CONFIGURATION & GENERAL EXPORT NAMING
 -------------------------------------------------------------------------------
 """
 
-# Crear clientes de AWS dependiendo del recurso(s)
-lambda_client = boto3.client('lambda')
-sf_client = boto3.client('stepfunctions')
-events_client = boto3.client('events')
-s3_client = boto3.client('s3')
-dms_client = boto3.client('dms')
-glue_client = boto3.client('glue')
-
 # Aqui podremos asignar el argumento, y nombre de la exportacion
 all_resources = {
-    "-lmb": (lambda_client, list_lambda_functions, 'lambda_functions.csv', lambda_attr),
-    "-sf": (sf_client, list_step_functions, 'step_functions.csv', sf_attr),
-    "-eb": (events_client, list_eventbridge_rules, 'eventbridge_rules.csv', eb_attr),
-    "-s3": (s3_client, list_s3_buckets, 's3_buckets.csv', bucket_attr),
-    "-ds": (dms_client, list_dms_tasks, 'dms_tasks.csv', dms_attr),
-    "-glue": (glue_client, list_glue_jobs, 'glue_jobs.csv', glue_attr)
+    "-lmb":     ('lambda_functions.csv', lambda_config),
+    "-sf":      ('step_functions.csv', sf_config),
+    "-eb":      ('eventbridge_rules.csv', eb_config),
+    "-s3":      ('s3_buckets.csv', bucket_config),
+    "-ds":      ('dms_tasks.csv', dms_config),
+    "-glue":    ('glue_jobs.csv', glue_config)
 }
 
 
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 HELPER FUNCTIONS
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
+# FUNCTION Crea la lista de recursos
+
+def list_aws_resources(client, resource_attr, list_method, response_key):
+    try:
+        response = getattr(client, list_method)() # Consulta las Lambda del RESPONSE
+        resource_list = [   # Formacion de la lista de funciones Lambda
+            [res.get(attr, 'N/A') for attr in resource_attr] for res in response[response_key]
+        ]
+    # Lanza error si detecta algun servicio inexistente(devolviendo la lista vacía)
+    except AttributeError as e: 
+        print(f"Método {list_method} no encontrado en el cliente AWS.")
+        print("-----------------------------------------------------")
+        print(f"Error : {e}")
+        print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        resource_list = []
+    return resource_list
+
+# FUNCTION Crea un nombre unico con timestamp para evitar que las versiones del historico se pisen con las nuevas y tener un historico
+
+def create_name(base_filename):
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"{base_filename.split('.')[0]}_{timestamp}.csv"
+
+# FUNCTION - Procesa el recurso, lo nombre y lo exporta
+
+def process_resource(client, list_function, filename, headers):
+    data = list_function(client)
+    timestamp_filename = create_name(filename)
+    export_to_csv(data, timestamp_filename, headers)
+    return timestamp_filename.split('_')[0]  # Retorna el nombre del recurso
+
 # FUNCTION - Exporta en formato CSV
 
 def export_to_csv(data, filename, headers):
@@ -285,29 +229,16 @@ def export_to_csv(data, filename, headers):
         for row in data:
             writer.writerow(row)
 
-# FUNCTION Crea un nombre unico con timestamp para evitar que las versiones del historico se pisen con las nuevas y tener un historico
-
-def create_unique_filename(base_filename):
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    return f"{base_filename.split('.')[0]}_{timestamp}.csv"
-
-# FUNCTION - Procesa el recurso, lo nombre y lo exporta
-
-def process_resource(client, list_function, filename, headers):
-    data = list_function(client)
-    unique_filename = create_unique_filename(filename)
-    export_to_csv(data, unique_filename, headers)
-    return unique_filename.split('_')[0]  # Retorna el nombre del recurso
-
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 MAIN FUNCTION
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
 
 def main():
     # Argumentos con los que se ejecuta el script de Python o que le llega desde el script de bash
     args = sys.argv[1:]
+
 
     # Creamos variable de expotacion
     exported_resources = []
@@ -318,12 +249,25 @@ def main():
 
     # Revisa los argumentos
     for arg in args:
+        if arg in all_resources:
+            filename, config = all_resources[arg]
+            data = list_aws_resources(config["client"], config["attributes"], config["list_method"], config["response_key"])
+            unique_filename = create_name(filename)
+            export_to_csv(data, unique_filename, config["attributes"])
+            exported_resources.append(unique_filename.split('_')[0])
+
+
+
+    for arg in args:
         # Comprueba que reside en los posibles recursos y lo procesa
         if arg in all_resources:
             client, list_function, filename , headers= all_resources[arg]
             # Lanza la funcion que procesa el recurso y lo exporta
             resource_name = process_resource(client, list_function, filename, headers)
             exported_resources.append(resource_name)
+
+
+
 
     print("Recursos exportados:")
     for resource in exported_resources:
@@ -332,18 +276,18 @@ def main():
     
 
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 Script Execution
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
 
 if __name__ == '__main__':
     main()
 
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 End of Script
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
 
 
@@ -351,7 +295,7 @@ End of Script
 
 
 """
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 OLD VERSIONs:
 =============
 v0.1.0 - Simple consulta de lista de lambdas y exportación a JSON
@@ -361,15 +305,27 @@ v0.1.3 - Feature - agrega más tipos de recursos
 v0.1.4 - Feature - agrega funcionalidad de argumentos
 v0.1.5 - Ampliacion de la consulta de Lambdas
 v0.1.6 - HOTFIX - Ampliacion de la consulta de atributos y consultas
+v0.1.7 - HOTFIX - Ampliacion de la consulta de atributos y consultas
+v0.1.7a - TEST BRACH
 
-POSIBLES FEATURES FUTURAS:
+
+FUTURE FEATUREs:
 ==========================
-- Agregar posibilidad de que agregue los subdiccionarios como columnas nuevas (EJEMPLO DMSTasks>ReplicationTaskStats)
-- Simplificar las funciones en una sola genérica y las configuraciones de attributos estén separados para facilitar la agregación de más o la reducción con un simple comentario
+- REFACTORING > Cambiar a modelo da CLASES para los servicios
+- HOTFIX > Arreglar DMSTask ya que el atributo TableMappings viene en formato JSON
+    - De momento queda INACTIVO
+    - Se puede codificar en BASE64, pero eso gestionaría más eficientemente la longitud de archivo pero influiría en su legibilidad
+    - Se puede sustitur y codificar los saltos de linea permitiendo una lectura directa del CSV, pero gestionará peor el tamaño el los datos del atributo/columna
+    - Agregar posibilidad de que agregue los subdiccionarios como columnas nuevas (EJEMPLO DMSTasks>ReplicationTaskStats)
+- Unificar la función de servicios con una parte de configuración de servicios de consulta por AWS
+- Posibilidad de externalizar la configuracion a traves de un archivo config, para no tocar el codigo
+- Posibilidad de comprimir los archivos en ZIP
+- Subir el programa a un repositorio
+        - crear script de bash adecuado generado por un excel para únicamente pegarlo en la consola y lanzarlo
+        - baje el repositorio y active el comando asociado a la elección de argumentos
 
 
+Music, Keep Calm & CODE!! @RobinGoldwing
 
-Music, Keep Calm & CODE!!
-
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 """
