@@ -4,7 +4,7 @@ Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera
 Created: 24/11/2023
 Last Modified: 24/11/2023
-Version: 0.1.5 - Ampliacion de la consulta de Lambdas
+Version: 0.1.6 - HOTFIX - Ampliacion de la consulta de atributos y consultas
 
 Description:
     Este script automatiza la exportacion de recursos AWS a archivos CSV.
@@ -61,28 +61,28 @@ FUNCTIONS DEFINITION
 
 # FUNCTION - Devuelve una lista de Lambda y sus configuraciones
 # COMENTADA
-def list_lambda_functions(lambda_client):
-    functions = lambda_client.list_functions() # Consulta las Lambda del RESPONSE
-    function_list = [] # Lista de Lambdas
-    # Lista de Attributos que recopila del RESPONSE
-    # MODIFICAR esta lista para incluir o eliminar attributos a exportar en CSV
-    function_attr = [
-        'FunctionName',
-        'FunctionArn',
-        'Role',
-        'Runtime', 
-        'Timeout',
-        'MemorySize'
-    ]
-    # Por cada servicio que encuentre, agrega a la lista cada uno de los atributos
-    for f in functions['Functions']:
-        # Agrega a la lista cada uno de los atributos por cada funcion
-        row = [f.get(attr, 'N/A') for attr in function_attr]
-        function_list.append((row))
-    print(function_list)
-    return function_list, function_attr  # Devuelve tambien los encabezados
+lambda_attr = [
+    'FunctionName',
+#    'FunctionArn',
+#    'Role',
+    'Runtime', 
+#    'Timeout',
+    'MemorySize'
+]
 
-# FUNCTION - Devuelve una lista de instancias StepFunctions y sus configuraciones
+def list_lambda_functions(lambda_client):
+    functions = lambda_client.list_functions()
+    function_list = []
+    intra_list = []
+    for f in functions['Functions']:
+        for lmb in lambda_attr:
+            lmb = f.get(lmb, 'N/A')
+            intra_list.append(lmb)
+        function_list.append((intra_list))
+    print(function_list)
+    return function_list
+
+######################################################################
 
 def list_step_functions(sf_client):
     state_machines = sf_client.list_state_machines()
@@ -218,7 +218,7 @@ def main():
 
     # Aqui podremos asignar el argumento, y nombre de la exportacion
     all_resources = {
-        "-lmb": (lambda_client, list_lambda_functions, 'lambda_functions.csv'),
+        "-lmb": (lambda_client, list_lambda_functions, 'lambda_functions.csv', lambda_attr),
         "-sf": (sf_client, list_step_functions, 'step_functions.csv'),
         "-eb": (events_client, list_eventbridge_rules, 'eventbridge_rules.csv'),
         "-s3": (s3_client, list_s3_buckets, 's3_buckets.csv'),
@@ -237,9 +237,8 @@ def main():
     for arg in args:
         # Comprueba que reside en los posibles recursos y lo procesa
         if arg in all_resources:
-            client, list_function, filename = all_resources[arg]
+            client, list_function, filename , headers= all_resources[arg]
             # Lanza la funcion que procesa el recurso y lo exporta
-            data, headers = list_function(client)
             resource_name = process_resource(client, list_function, filename, headers)
             exported_resources.append(resource_name)
 
@@ -277,6 +276,7 @@ v0.1.1 - Feature - exporta también Buckets S3
 v0.1.2 - Feature - exporta a CSV
 v0.1.3 - Feature - agrega más tipos de recursos
 v0.1.4 - Feature - agrega funcionalidad de argumentos
+v0.1.5 - Ampliacion de la consulta de Lambdas
 
 POSIBLES FEATURES FUTURAS:
 ==========================
