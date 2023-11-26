@@ -5,8 +5,10 @@ Author: Ruben Alvarez Mosquera AKA GitHub@RobinGoldwing
 Created: 25/11/2023
 Last Modified: 25/11/2023
 
-Version: 
-    v0.2 - STABLE VERSION
+Version: v0.3 
+    - Add ZIP capability
+    - Modify export path * PENDING
+    - Minor Fixes
 
 Description:
     This script automates the export of AWS resources to CSV files.
@@ -18,12 +20,12 @@ Usage :
 
 Options:
     -all  : Exports all resources
-    -lmb  : Exports Lambda functions
+    -lb   : Exports Lambda functions
     -sf   : Exports Step Functions
     -eb   : Exports EventBridge rules
     -s3   : Exports S3 buckets
     -ds   : Exports DMS Tasks
-    -glue : Exports Glue Jobs
+    -gl   : Exports Glue Jobs
 
 
 
@@ -58,6 +60,8 @@ SCRIPT HEADER
 import boto3
 import csv
 import sys
+import os
+import zipfile
 from datetime import datetime
 
 """
@@ -70,14 +74,57 @@ SERVICES & ATTR. CONFIGURATION
 ###############################################################################
 
 ATTRIBUTES_CONFIG = {
-    "lambda": ['FunctionName', 'Runtime', 'Timeout', 'MemorySize', 'FunctionArn', 'Role'],
-    "stepfunctions": ['name', 'stateMachineArn', 'creationDate'],
-    "eventbridge": ['Name', 'Arn', 'ScheduleExpression', 'State', 'Description'],
-    "s3": ['Name', 'CreationDate'],
-    "dms": ['ReplicationTaskIdentifier', 'Status', 'ReplicationTaskArn', 'StopReason', 'LastFailureMessage',
-            # 'TableMappings'
-            ],
-    "glue": ['Name', 'Role', 'CreatedOn', 'LastModifiedOn', 'MaxRetries', 'AllocatedCapacity', 'Timeout', 'MaxCapacity', 'WorkerType', 'NumberOfWorkers', 'GlueVersion']
+
+    "lambda": [
+        'FunctionName',
+        'Runtime',
+        'Timeout',
+        'MemorySize',
+        'FunctionArn',
+        'Role',
+        ],
+
+    "stepfunctions": [
+        'name', 
+        'stateMachineArn', 
+        'creationDate', 
+        ],
+
+    "eventbridge": [
+        'Name', 
+        'Arn', 
+        'ScheduleExpression', 
+        'State', 
+        'Description',
+        ],
+
+    "s3": [
+        'Name', 
+        'CreationDate',
+        ],
+
+    "dms": [
+        'ReplicationTaskIdentifier', 
+        'Status', 
+        'ReplicationTaskArn', 
+        'StopReason', 
+        'LastFailureMessage',
+        # 'TableMappings'
+        ],
+
+    "glue": [
+        'Name', 
+        'Role', 
+        'CreatedOn', 
+        'LastModifiedOn', 
+        'MaxRetries', 
+        'AllocatedCapacity', 
+        'Timeout', 
+        'MaxCapacity', 
+        'WorkerType', 
+        'NumberOfWorkers', 
+        'GlueVersion',
+        ]
 }
 
 
@@ -93,12 +140,12 @@ clients = {
 
 # Configuracion de recursos
 resources_config = {
-    "-lmb": ("lambda_functions.csv", "lambda", "list_functions", "Functions"),
-    "-sf": ("step_functions.csv", "stepfunctions", "list_state_machines", "stateMachines"),
-    "-eb": ("eventbridge_rules.csv", "eventbridge", "list_rules", "Rules"),
-    "-s3": ("s3_buckets.csv", "s3", "list_buckets", "Buckets"),
-    "-ds": ("dms_tasks.csv", "dms", "describe_replication_tasks", "ReplicationTasks"),
-    "-glue": ("glue_jobs.csv", "glue", "get_jobs", "Jobs")
+    "-lb": ("lambda_functions", "lambda", "list_functions", "Functions"),
+    "-sf": ("step_functions", "stepfunctions", "list_state_machines", "stateMachines"),
+    "-eb": ("eventbridge_rules", "eventbridge", "list_rules", "Rules"),
+    "-s3": ("s3_buckets", "s3", "list_buckets", "Buckets"),
+    "-ds": ("dms_tasks", "dms", "describe_replication_tasks", "ReplicationTasks"),
+    "-gl": ("glue_jobs", "glue", "get_jobs", "Jobs")
 }
 
 """
@@ -124,6 +171,7 @@ HELPER FUNCTIONS
 --------------------------------------------------------------------------------
 """
 
+
 # FUNCTION - Exporta en formato CSV
 def export_to_csv(data, filename, headers):
     with open(filename, 'w', newline='') as file:
@@ -133,10 +181,21 @@ def export_to_csv(data, filename, headers):
             writer.writerow(row)
 
 # FUNCTION Crea un nombre unico con timestamp para tener un historico
-def create_unique_filename(base_filename):
+def create_unique_filename(base_filename, extension):
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    return f"{base_filename.split('.')[0]}_{timestamp}.csv"
+    return f"{base_filename}_{timestamp}.{extension}"
 
+# FUNTION - Crea directorio de exportacion
+def create_export_directory():
+    export_dir = 'export-files'
+    if not os.path.exists(export_dir):
+        os.makedirs(export_dir)
+
+# FUNCTION - Comprime archivos CSV en un archivo ZIP
+def zip_files(filenames, zip_filename):
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+        for file in filenames:
+            zipf.write(file, os.path.basename(file))
 
 """
 --------------------------------------------------------------------------------
@@ -145,36 +204,54 @@ MAIN FUNCTION
 """
 # FUNCTION - PRINCIPAL
 def main():
-    args = sys.argv[1:]
+    os.system('cls' if os.name == 'nt' else 'clear') # Limpiar el terminal
+    # Encabezado del terminal 
+    print("#===============================#")
+    print("| AWS Auditor - Export AWS Data |")
+    print("#===============================#\n")
 
-    # Si esta el argumento -all agrega todos los recursos independientemente de los demas argumentos
+    args = sys.argv[1:] # Obtiene lista de argumentos
+    exported_resources = [] # Crea lista de recursos a exportar
+    export_dir = create_export_directory() # Crea el directorio de exportacoón si no existe
+
+    # Si existe el argumento -all agrega todos los recursos independientemente de los demas argumentos
     if "-all" in args or len(args) == 0:
         args = resources_config.keys()
-
-    exported_resources = []
-
+   
+    # Bucle principal que itera por los argumentos y servicios configurados
     for arg in args:
         if arg in resources_config:
-            # print('>>> for : arg >>>', arg) #### TEST
-            filename, service, list_method, response_key = resources_config[arg]
-            # print('>>> for : resources >>>',resources_config[arg] ) #### TEST
-            client = clients[service]
-            # print('>>> for : client >>>',client ) #### TEST
-            attributes = ATTRIBUTES_CONFIG[service]
-            # print('>>> for : Attrb. >>>',attributes ) #### TEST
-            data = list_aws_resources(client, list_method, response_key, attributes)
-            unique_filename = create_unique_filename(filename)
-            export_to_csv(data, unique_filename, attributes)
-            exported_resources.append((unique_filename.split('_')[0],unique_filename))
+            filename, service, list_method, response_key = resources_config[arg] # Obtiene la configuracion del servicio
+            client = clients[service] # Obtiene el cliente del servicio
+            attributes = ATTRIBUTES_CONFIG[service] # Obtiene los atributos del servicio
+            data = list_aws_resources(client, list_method, response_key, attributes) # Obtiene el listado de los recursos del servicio
+            unique_filename = create_unique_filename(filename, 'csv') # Crea un nombre único con un timestamp
+            export_to_csv(data, unique_filename, attributes) # Exporta el resultado
+            exported_resources.append((unique_filename.split('_')[0],unique_filename)) # agrega un tupla del nombre del recurso y el archivo
 
-    print("Recursos exportados:")
+    # Crea lista de recursos exportados
+    exported_filename = [resource[1] for resource in exported_resources]
+
+    # Comprime los archivos CSV en ZIP
+    # unique_zip_filename = os.path.join(export_dir, create_unique_filename('AWS_exported_data','zip'))
+    # zip_files(exported_filename, unique_zip_filename)
+    zip_files(exported_filename, 'AWS_export_data.zip')
+
+    # Imprime los recursos exportados y el nombre del archivo generado, así como el archivo comprimido
+    print("Exported Resources:")
+    print("====================\n")
+    print("{:<25} {:<10} {:<50}".format("Resource", ">>>", "Exported File"))
+    print("-" * 80)
     for resource in exported_resources:
-        print(resource[0]," >>> File >>> ", resource[1])
+        print("{:<25} {:<10} {:<50}".format(resource[0], ">>>", resource[1]))
+    # print(f"Archivos comprimidos en: {unique_zip_filename}")
+    print(f"\nAll files compressed : 'AWS_export_data.zip'")
+    print("\n\n")
 
 
 """
 --------------------------------------------------------------------------------
-Script Execution
+SCRIPT EXECUTION
 --------------------------------------------------------------------------------
 """
 
@@ -192,12 +269,10 @@ End of Script
 
 
 """
---------------------------------------------------------------------------------
 OLD VERSIONs:
-=============
+============
+--------------------------------------------------------------------------------
 
-## OLD VERSIONS:
-=============
 v0.1.0 - Simple lambdas list query and export to JSON
 v0.1.1 - Feature - export also S3 Buckets
 v0.1.2 - Feature - export to CSV
@@ -211,9 +286,17 @@ v0.1.7b - TEST BRACH
 v0.1.7c - STABLE VERSION
 v0.1.8 - REFACTORING Unify service query functions and externalize service configuration and associated proper nouns
 v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
+v0.2 - STABLE VERSION
+--------------------------------------------------------------------------------
+"""
 
-## FUTURE FEATUREs:
-================
+
+
+
+"""
+FUTURE FEATUREs:
+===============
+--------------------------------------------------------------------------------
 - FEATURE - Added ability to compress files into ZIP format, with a new argument
 - Possibility to externalize the configuration through a config file, so as not to touch the code.
 - HOTFIX > Fix DMSTask since the TableMappings attribute comes in JSON format.
@@ -222,7 +305,20 @@ v0.1.9 - REFACTORING 2 Unify service query functions and externalize service con
     - Line breaks can be replaced and encoded allowing a direct reading of the CSV, but it will handle the size of the attribute/column data worse.
     - Add the possibility to add the sub-divisions as new columns (EXAMPLE DMSTasks>ReplicationTaskStats)
 
-Music, Keep Calm & CODE!! @RobinGoldwing
+Music, Keep Calm & CODE!! - GitHub@RobinGoldwing
+
+--------------------------------------------------------------------------------
+"""
+
+
+
+
+
+"""
+NOTES:
+--------------------------------------------------------------------------------
+
+# print('>>> for : arg >>>', arg) #### TEST
 
 --------------------------------------------------------------------------------
 """

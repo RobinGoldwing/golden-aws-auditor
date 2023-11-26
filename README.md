@@ -28,17 +28,18 @@ bash start-awsauditor.sh [options]
 
 Python:
 ```
-Python3 asauditor.py [options]
+python3 awsauditor.py [options]
 ```
 
 ### Options
 - `-all`: Exports all resources.
-- `-lmb`: Exports Lambda functions.
+
+- `-lb`: Exports Lambda functions.
 - `-sf`: Exports Step Functions.
 - `-eb`: Exports EventBridge rules.
 - `-s3`: Exports S3 buckets.
 - `-ds`: Exports DMS Tasks.
-- `-glue`: Exports Glue Jobs.
+- `-gl`: Exports Glue Jobs.
 
 ## Requirements
 AWS CLI and Boto3 are configured: Ensure that AWS CLI is installed and configured with the correct credentials, and that Boto3 is installed in your Python environment.
@@ -80,24 +81,21 @@ Created with :heart: by RobinGoldwing.
 
 *"Music, Keep Calm & CODE!!"* - RobinGoldwing
 
-## OLD VERSIONS:
-=============
-v0.1.0 - Simple lambdas list query and export to JSON
-v0.1.1 - Feature - export also S3 Buckets
-v0.1.2 - Feature - export to CSV
-v0.1.3 - Feature - add more resource types
-v0.1.4 - Feature - adds arguments functionality
-v0.1.5 - Lambdas query enhancement
-v0.1.6 - HOTFIX - Attribute and query query query extension
-v0.1.7 - HOTFIX - Attribute and query query query extension
-v0.1.7a - TEST BRACH
-v0.1.7b - TEST BRACH
-v0.1.7c - STABLE VERSION
-v0.1.8 - REFACTORING Unify service query functions and externalize service configuration and associated proper nouns
-v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
-
-## FUTURE FEATUREs:
-================
+## Old Versions
+- v0.1.0 - Simple lambdas list query and export to JSON
+- v0.1.1 - Feature - export also S3 Buckets
+- v0.1.2 - Feature - export to CSV
+- v0.1.3 - Feature - add more resource types
+- v0.1.4 - Feature - adds arguments functionality
+- v0.1.5 - Lambdas query enhancement
+- v0.1.6 - HOTFIX - Attribute and query query query extension
+- v0.1.7 - HOTFIX - Attribute and query query query extension
+- v0.1.7a - TEST BRACH
+- v0.1.7b - TEST BRACH
+- v0.1.7c - STABLE VERSION
+- v0.1.8 - REFACTORING Unify service query functions and externalize service - configuration and associated proper nouns
+- v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
+## Future Features
 - Possibility to externalize the configuration through a config file, so as not to touch the code.
 - HOTFIX > Fix DMSTask since the TableMappings attribute comes in JSON format.
     - For the moment it is INACTIVE
