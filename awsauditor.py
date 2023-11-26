@@ -50,7 +50,6 @@ SCRIPT HEADER - IMPORTS
 --------------------------------------------------------------------------------
 """
 
-
 import boto3
 import csv
 import sys
@@ -58,7 +57,9 @@ import os
 import zipfile
 from datetime import datetime
 
-
+# Evitar que los Warnings aparezcan por terminal
+import warnings
+warnings.filterwarnings("ignore")
 
 """
 --------------------------------------------------------------------------------
@@ -67,12 +68,11 @@ VERSION & GENERAL CONFIGURATIONS
 """
 # Version actual, ultima modificacion y cambios realizados
 version = {
-    'ActualVersion' : 'v0.3.1',
+    'Name' : 'AWS Auditor',
+    'ActualVersion' : 'v0.3.2',
     'LastModification': '26/11/2023',
     'Changes' : [
-        'Create export&zip data folders',
-        'Export files to folder destination',
-        'Create ZIP inside folder destination',
+        'Avoid warnings in console',
     ]
 }
 
@@ -82,6 +82,15 @@ csv_dir_name = 'csv-files'
 # Nombre del archivo ZIP y su directorio de exportacion
 zip_dir_name = 'zip-files'
 zip_filename = 'AWS_export_data'
+
+# Titulo del Script por consola
+console_title = f'''
+#=========================#
+   {version['Name']} - {version['ActualVersion']} 
+#=========================#
+
+'''
+
 
 """
 -------------------------------------------------------------------------------
@@ -146,8 +155,7 @@ ATTRIBUTES_CONFIG = {
         ]
 }
 
-
-# Crear clientes de AWS
+# Configuracion clientes de AWS
 clients = {
     "lambda": boto3.client('lambda'),
     "stepfunctions": boto3.client('stepfunctions'),
@@ -157,7 +165,7 @@ clients = {
     "glue": boto3.client('glue')
 }
 
-# Configuracion de recursos
+# Configuracion argumentos y de recursos asociados
 resources_config = {
     # arg :  FileName           Service    AWS CLI Method   Response Key
     "-lb": ("lambda_functions", "lambda", "list_functions", "Functions"),
@@ -191,7 +199,6 @@ HELPER FUNCTIONS
 --------------------------------------------------------------------------------
 """
 
-
 # FUNCTION - Exporta en formato CSV
 def export_to_csv(data, filename, headers):
     with open(filename, 'w', newline='') as file:
@@ -223,11 +230,10 @@ MAIN FUNCTION
 """
 # FUNCTION - PRINCIPAL
 def main():
-    os.system('cls' if os.name == 'nt' else 'clear') # Limpiar el terminal
+    # os.system('cls' if os.name == 'nt' else 'clear') # Limpiar el terminal
+    
     # Encabezado del terminal 
-    print("#===============================#")
-    print("| AWS Auditor - Export AWS Data |")
-    print("#===============================#\n")
+    print(console_title)
 
     args = sys.argv[1:] # Obtiene lista de argumentos
     exported_resources = [] # Crea lista de recursos a exportar
@@ -306,6 +312,7 @@ v0.1.8 - REFACTORING Unify service query functions and externalize service confi
 v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
 v0.2 - STABLE VERSION
 v0.3 - Add ZIP capability
+v0.3.1 - Create export&zip data folders
 --------------------------------------------------------------------------------
 """
 

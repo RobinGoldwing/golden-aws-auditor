@@ -76,6 +76,11 @@ check_dependency() {
 # --------------------------------------------------------------------------------
 # MAIN CODE
 # --------------------------------------------------------------------------------
+echo
+echo "========================="
+echo "  Bash Script Execution  "
+echo "========================="
+echo
 
 # Verificar Python3 y Git
 check_dependency "python3"
@@ -107,3 +112,8 @@ else
     # Ejecutar el script de Python con los argumentos pasados al script de Bash
     python3 awsauditor.py "$@"
 fi
+
+echo
+echo "Bash Script ended"
+echo "================="
+echo
