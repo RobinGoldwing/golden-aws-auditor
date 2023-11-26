@@ -2,13 +2,7 @@
 --------------------------------------------------------------------------------
 Script Name: AWS Auditor
 Author: Ruben Alvarez Mosquera AKA GitHub@RobinGoldwing
-Created: 25/11/2023
-Last Modified: 25/11/2023
-
-Version: v0.3 
-    - Add ZIP capability
-    - Modify export path * PENDING
-    - Minor Fixes
+Created: 23/11/2023
 
 Description:
     This script automates the export of AWS resources to CSV files.
@@ -52,7 +46,7 @@ Music, Keep Calm & CODE!! // GitHub@RobinGoldwing
 
 """
 --------------------------------------------------------------------------------
-SCRIPT HEADER
+SCRIPT HEADER - IMPORTS
 --------------------------------------------------------------------------------
 """
 
@@ -63,6 +57,31 @@ import sys
 import os
 import zipfile
 from datetime import datetime
+
+
+
+"""
+--------------------------------------------------------------------------------
+VERSION & GENERAL CONFIGURATIONS
+--------------------------------------------------------------------------------
+"""
+# Version actual, ultima modificacion y cambios realizados
+version = {
+    'ActualVersion' : 'v0.3.1',
+    'LastModification': '26/11/2023',
+    'Changes' : [
+        'Create export&zip data folders',
+        'Export files to folder destination',
+        'Create ZIP inside folder destination',
+    ]
+}
+
+# Nombre del directorio de exportacion de los archivos CSV
+csv_dir_name = 'csv-files'
+
+# Nombre del archivo ZIP y su directorio de exportacion
+zip_dir_name = 'zip-files'
+zip_filename = 'AWS_export_data'
 
 """
 -------------------------------------------------------------------------------
@@ -140,6 +159,7 @@ clients = {
 
 # Configuracion de recursos
 resources_config = {
+    # arg :  FileName           Service    AWS CLI Method   Response Key
     "-lb": ("lambda_functions", "lambda", "list_functions", "Functions"),
     "-sf": ("step_functions", "stepfunctions", "list_state_machines", "stateMachines"),
     "-eb": ("eventbridge_rules", "eventbridge", "list_rules", "Rules"),
@@ -182,19 +202,18 @@ def export_to_csv(data, filename, headers):
 
 # FUNCTION Crea un nombre unico con timestamp para tener un historico
 def create_unique_filename(base_filename, extension):
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M")
     return f"{base_filename}_{timestamp}.{extension}"
 
 # FUNTION - Crea directorio de exportacion
-def create_export_directory():
-    export_dir = 'export-files'
-    if not os.path.exists(export_dir):
-        os.makedirs(export_dir)
+def create_export_directory(dir_name):
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
 
 # FUNCTION - Comprime archivos CSV en un archivo ZIP
-def zip_files(filenames, zip_filename):
+def zip_files(filenames_list, zip_filename):
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        for file in filenames:
+        for file in filenames_list:
             zipf.write(file, os.path.basename(file))
 
 """
@@ -212,7 +231,8 @@ def main():
 
     args = sys.argv[1:] # Obtiene lista de argumentos
     exported_resources = [] # Crea lista de recursos a exportar
-    export_dir = create_export_directory() # Crea el directorio de exportacoón si no existe
+    create_export_directory(csv_dir_name) # Crea el directorio de exportacon CSV si no existe
+    create_export_directory(zip_dir_name) # Crea el directorio de exportacon ZIP si no existe
 
     # Si existe el argumento -all agrega todos los recursos independientemente de los demas argumentos
     if "-all" in args or len(args) == 0:
@@ -225,7 +245,7 @@ def main():
             client = clients[service] # Obtiene el cliente del servicio
             attributes = ATTRIBUTES_CONFIG[service] # Obtiene los atributos del servicio
             data = list_aws_resources(client, list_method, response_key, attributes) # Obtiene el listado de los recursos del servicio
-            unique_filename = create_unique_filename(filename, 'csv') # Crea un nombre único con un timestamp
+            unique_filename =  os.path.join(csv_dir_name, create_unique_filename(filename, 'csv')) # Crea un nombre único con un timestamp
             export_to_csv(data, unique_filename, attributes) # Exporta el resultado
             exported_resources.append((unique_filename.split('_')[0],unique_filename)) # agrega un tupla del nombre del recurso y el archivo
 
@@ -233,9 +253,8 @@ def main():
     exported_filename = [resource[1] for resource in exported_resources]
 
     # Comprime los archivos CSV en ZIP
-    # unique_zip_filename = os.path.join(export_dir, create_unique_filename('AWS_exported_data','zip'))
-    # zip_files(exported_filename, unique_zip_filename)
-    zip_files(exported_filename, 'AWS_export_data.zip')
+    unique_zip_filename = os.path.join(zip_dir_name, create_unique_filename(zip_filename,'zip')) # Genera TimeStamp y concatena con extension de archivo
+    zip_files(exported_filename, unique_zip_filename)
 
     # Imprime los recursos exportados y el nombre del archivo generado, así como el archivo comprimido
     print("Exported Resources:")
@@ -244,8 +263,7 @@ def main():
     print("-" * 80)
     for resource in exported_resources:
         print("{:<25} {:<10} {:<50}".format(resource[0], ">>>", resource[1]))
-    # print(f"Archivos comprimidos en: {unique_zip_filename}")
-    print(f"\nAll files compressed : 'AWS_export_data.zip'")
+    print(f"\nAll files compressed at : {unique_zip_filename}")
     print("\n\n")
 
 
@@ -287,6 +305,7 @@ v0.1.7c - STABLE VERSION
 v0.1.8 - REFACTORING Unify service query functions and externalize service configuration and associated proper nouns
 v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
 v0.2 - STABLE VERSION
+v0.3 - Add ZIP capability
 --------------------------------------------------------------------------------
 """
 

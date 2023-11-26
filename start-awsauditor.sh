@@ -57,7 +57,7 @@ check_dependency() {
     dependency=$1
     if ! command -v $dependency &> /dev/null
     then
-        echo "El programa '$dependency' no está instalado."
+        echo "La dependencia '$dependency' no está instalada."
         if [[ $dependency == "python3" ]]
         then
             echo "Por favor, instale Python 3."
@@ -68,6 +68,8 @@ check_dependency() {
             echo "Comando sugerido: apt-get install git (o equivalente en su sistema)"
         fi
         exit 1
+    else
+        echo "La dependencia '$dependency' está instalada correctamente."
     fi
 }
 
@@ -84,6 +86,8 @@ if ! python3 -c "import boto3" &> /dev/null; then
     echo "boto3 no está instalado."
     echo "Puede hacerlo con el siguiente comando: < pip install boto3 >"
     exit 1
+else
+    echo "La dependencia 'boto3' está instalada correctamente."
 fi
 
 # Verificar si awsauditor.py esta en el directorio actual
