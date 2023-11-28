@@ -23,12 +23,12 @@ Simply run the bash or Python script with the desired service flags, and voilà!
 
 Bash:
 ```
-bash start-awsauditor.sh [options]
+bash start-aws-auditor.sh [options]
 ```
 
 Python:
 ```
-python3 awsauditor.py [options]
+python3 aws-auditor.py [options]
 ```
 
 ### Options
@@ -80,25 +80,3 @@ Created with :heart: by RobinGoldwing.
 ---
 
 *"Music, Keep Calm & CODE!!"* - RobinGoldwing
-
-## Old Versions
-- v0.1.0 - Simple lambdas list query and export to JSON
-- v0.1.1 - Feature - export also S3 Buckets
-- v0.1.2 - Feature - export to CSV
-- v0.1.3 - Feature - add more resource types
-- v0.1.4 - Feature - adds arguments functionality
-- v0.1.5 - Lambdas query enhancement
-- v0.1.6 - HOTFIX - Attribute and query query query extension
-- v0.1.7 - HOTFIX - Attribute and query query query extension
-- v0.1.7a - TEST BRACH
-- v0.1.7b - TEST BRACH
-- v0.1.7c - STABLE VERSION
-- v0.1.8 - REFACTORING Unify service query functions and externalize service - configuration and associated proper nouns
-- v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
-## Future Features
-- Possibility to externalize the configuration through a config file, so as not to touch the code.
-- HOTFIX > Fix DMSTask since the TableMappings attribute comes in JSON format.
-    - For the moment it is INACTIVE
-    - It is possible to encode in BASE64, but this would manage file length more efficiently but would affect readability.
-    - Line breaks can be replaced and encoded allowing a direct reading of the CSV, but it will handle the size of the attribute/column data worse.
-    - Add the possibility to add the sub-divisions as new columns (EXAMPLE DMSTasks>ReplicationTaskStats)

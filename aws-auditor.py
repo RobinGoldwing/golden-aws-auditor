@@ -57,7 +57,6 @@ import os
 import zipfile
 from datetime import datetime
 
-# Evitar que los Warnings aparezcan por terminal
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -178,9 +177,105 @@ resources_config = {
 
 """
 --------------------------------------------------------------------------------
+DEV FUNCTIONS #1
+--------------------------------------------------------------------------------
+"""
+# Inicializar un cliente de AWS Lambda
+lambda_client = boto3.client('lambda')
+
+
+def get_lambda_function_info(function_name):
+    try:
+        # Obtener detalles de la función Lambda
+        response = lambda_client.get_function(FunctionName=function_name)
+
+        # Extraer y retornar la información relevante
+        return {
+            'FunctionName': response['Configuration']['FunctionName'],
+            'Runtime': response['Configuration']['Runtime'],
+            'Role': response['Configuration']['Role'],
+            'Handler': response['Configuration']['Handler'],
+            'Description': response['Configuration'].get('Description', 'N/A'),
+            'Timeout': response['Configuration']['Timeout'],
+            'MemorySize': response['Configuration']['MemorySize'],
+            'LastModified': response['Configuration']['LastModified'],
+            'CodeSize': response['Configuration']['CodeSize'],
+            'Environment': response['Configuration'].get('Environment', {}),
+            'TracingConfig': response['Configuration'].get('TracingConfig', {}),
+            'CodeLocation': response['Code']['Location'],
+        }
+    except Exception as e:
+        return {'Error': str(e)}
+
+"""
+--------------------------------------------------------------------------------
+DEV FUNCTIONS 2
+--------------------------------------------------------------------------------
+"""
+
+import boto3
+from botocore.exceptions import ClientError
+
+# Inicializar clientes de AWS para Lambda, IAM y CloudWatch
+lambda_client = boto3.client('lambda')
+iam_client = boto3.client('iam')
+cloudwatch_client = boto3.client('cloudwatch')
+
+def get_lambda_function_info(function_name):
+    try:
+        # Obtener detalles básicos de la función Lambda
+        response = lambda_client.get_function(FunctionName=function_name)
+        function_details = response['Configuration']
+
+        # Obtener detalles de la política de IAM
+        role_name = function_details['Role'].split('/')[-1]
+        policy = iam_client.get_role_policy(RoleName=role_name, PolicyName=role_name)
+
+        # Obtener métricas de CloudWatch (últimos 14 días por ejemplo)
+        metrics = cloudwatch_client.get_metric_data(
+            MetricDataQueries=[
+                {
+                    'Id': 'invocations',
+                    'MetricStat': {
+                        'Metric': {
+                            'Namespace': 'AWS/Lambda',
+                            'MetricName': 'Invocations',
+                            'Dimensions': [
+                                {
+                                    'Name': 'FunctionName',
+                                    'Value': function_name
+                                },
+                            ]
+                        },
+                        'Period': 3600,
+                        'Stat': 'Sum',
+                    },
+                    'ReturnData': True,
+                },
+            ],
+            StartTime='2023-01-01T00:00:00Z',  # Ajusta las fechas según sea necesario
+            EndTime='2023-01-14T00:00:00Z',
+        )
+
+        # Obtener tags de Lambda
+        tags = lambda_client.list_tags(Resource=function_details['FunctionArn'])
+
+        return {
+            'BasicDetails': function_details,
+            'IAMRolePolicy': policy,
+            'CloudWatchMetrics': metrics,
+            'Tags': tags
+        }
+    except ClientError as e:
+        return {'Error': str(e)}
+
+
+"""
+--------------------------------------------------------------------------------
 FUNCTIONS DEFINITION
 --------------------------------------------------------------------------------
 """
+
 
 # FUNCTION - Devuelve una lista con los recursos del servicio 
 def list_aws_resources(client, list_method, response_key, attributes):
@@ -212,7 +307,7 @@ def create_unique_filename(base_filename, extension):
     timestamp = datetime.now().strftime("%Y%m%d%H%M")
     return f"{base_filename}_{timestamp}.{extension}"
 
-# FUNTION - Crea directorio de exportacion
+# FUNCTION - Crea directorio de exportacion
 def create_export_directory(dir_name):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
@@ -287,35 +382,6 @@ if __name__ == '__main__':
 End of Script
 --------------------------------------------------------------------------------
 """
-
-
-
-
-
-"""
-OLD VERSIONs:
-============
---------------------------------------------------------------------------------
-
-v0.1.0 - Simple lambdas list query and export to JSON
-v0.1.1 - Feature - export also S3 Buckets
-v0.1.2 - Feature - export to CSV
-v0.1.3 - Feature - add more resource types
-v0.1.4 - Feature - adds arguments functionality
-v0.1.5 - Lambdas query enhancement
-v0.1.6 - HOTFIX - Attribute and query query query extension
-v0.1.7 - HOTFIX - Attribute and query query query extension
-v0.1.7a - TEST BRACH
-v0.1.7b - TEST BRACH
-v0.1.7c - STABLE VERSION
-v0.1.8 - REFACTORING Unify service query functions and externalize service configuration and associated proper nouns
-v0.1.9 - REFACTORING 2 Unify service query functions and externalize service configuration and associated proper nouns
-v0.2 - STABLE VERSION
-v0.3 - Add ZIP capability
-v0.3.1 - Create export&zip data folders
---------------------------------------------------------------------------------
-"""
-
 
 
 
