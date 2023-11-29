@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # --------------------------------------------------------------------------------
 # Script Name: AWS Auditor
 # Author: Ruben Alvarez Mosquera //  GitHub@RobinGoldwing
@@ -17,7 +16,7 @@
 #     It supports multiple services like Lambda, Step Functions, EventBridge, etc.
 #
 # Usage:
-#     bash start-awsauditor.sh [options]
+#     bash start-aws-auditor.sh [options]
 #
 # Options:
 #     -all  : Exports all resources
@@ -57,19 +56,19 @@ check_dependency() {
     dependency=$1
     if ! command -v $dependency &> /dev/null
     then
-        echo "La dependencia '$dependency' no está instalada."
+        echo "Dependency '$dependency' is not installed."
         if [[ $dependency == "python3" ]]
         then
-            echo "Por favor, instale Python 3."
-            echo "Comando sugerido: apt-get install python3 (o equivalente en su sistema)"
+            echo "Please install Python 3."
+            echo "Suggested command: apt-get install python3 (or equivalent in your system)"
         elif [[ $dependency == "git" ]]
         then
-            echo "Por favor, instale Git."
-            echo "Comando sugerido: apt-get install git (o equivalente en su sistema)"
+            echo "Please install Git."
+            echo "Suggested command: apt-get install git (or equivalent in your system)"
         fi
         exit 1
     else
-        echo "La dependencia '$dependency' está instalada correctamente."
+        echo "Dependency '$dependency' is correctly installed."
     fi
 }
 
@@ -82,38 +81,34 @@ echo "  Bash Script Execution  "
 echo "========================="
 echo
 
-# Verificar Python3 y Git
 check_dependency "python3"
 check_dependency "git"
 
-# Verificar boto3
 if ! python3 -c "import boto3" &> /dev/null; then
-    echo "boto3 no está instalado."
-    echo "Puede hacerlo con el siguiente comando: < pip install boto3 >"
+    echo "boto3 is not installed."
+    echo "You can install it with the following command: < pip install boto3 >"
     exit 1
 else
-    echo "La dependencia 'boto3' está instalada correctamente."
+    echo "Dependency 'boto3' is correctly installed."
 fi
 
-# Verificar si awsauditor.py esta en el directorio actual
-if [[ -f "awsauditor.py" ]]; then
-    # Ejecutar el script de Python directamente
-    python3 awsauditor.py "$@"
+if [[ -f "aws-auditor.py" ]]; then
+
+    python3 aws-auditor.py "$@"
 
 else
-    # Clonar el repositorio si aun no esta clonado
+
     if [ ! -d "golden-aws-auditor" ]; then
         git clone https://github.com/RobinGoldwing/golden-aws-auditor
     fi
 
-    # Cambiar al directorio del repositorio
     cd golden-aws-auditor
 
-    # Ejecutar el script de Python con los argumentos pasados al script de Bash
-    python3 awsauditor.py "$@"
+    python3 aws-auditor.py "$@"
 fi
 
 echo
-echo "Bash Script ended"
+echo "================="
+echo " End Bash Script "
 echo "================="
 echo

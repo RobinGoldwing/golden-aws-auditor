@@ -62,11 +62,11 @@ warnings.filterwarnings("ignore")
 
 """
 --------------------------------------------------------------------------------
-VERSION & GENERAL CONFIGURATIONS
+CONSTANTS CONFIGURATION
 --------------------------------------------------------------------------------
 """
-# Version actual, ultima modificacion y cambios realizados
-version = {
+# VERSION & GENERAL CONFIGURATIONS
+VERSION = {
     'Name' : 'AWS Auditor',
     'ActualVersion' : 'v0.3.2',
     'LastModification': '26/11/2023',
@@ -75,17 +75,14 @@ version = {
     ]
 }
 
-# Nombre del directorio de exportacion de los archivos CSV
-csv_dir_name = 'csv-files'
+CSV_DIR_NAME = 'csv-files'
+ZIP_DIR_NAME = 'zip-files'
+ZIP_FILENAME = 'AWS_export_data'
 
-# Nombre del archivo ZIP y su directorio de exportacion
-zip_dir_name = 'zip-files'
-zip_filename = 'AWS_export_data'
-
-# Titulo del Script por consola
-console_title = f'''
+# Console title
+CONSOLE_TITLE = f'''
 #=========================#
-   {version['Name']} - {version['ActualVersion']} 
+   {VERSION['Name']} - {VERSION['ActualVersion']} 
 #=========================#
 
 '''
@@ -96,9 +93,7 @@ console_title = f'''
 SERVICES & ATTR. CONFIGURATION
 -------------------------------------------------------------------------------
 """
-# MODIFICAR estas listas para incluir o eliminar attributos a exportar en CSV a
-#  traves de comentar o añadirlos
-###############################################################################
+# Add/remove consults and/or add/remove columns to show in exported CSV files
 
 ATTRIBUTES_CONFIG = {
 
@@ -153,9 +148,7 @@ ATTRIBUTES_CONFIG = {
         'GlueVersion',
         ]
 }
-
-# Configuracion clientes de AWS
-clients = {
+CLIENTS = {
     "lambda": boto3.client('lambda'),
     "stepfunctions": boto3.client('stepfunctions'),
     "eventbridge": boto3.client('events'),
@@ -164,8 +157,7 @@ clients = {
     "glue": boto3.client('glue')
 }
 
-# Configuracion argumentos y de recursos asociados
-resources_config = {
+RESOURCES_CONFIG = {
     # arg :  FileName           Service    AWS CLI Method   Response Key
     "-lb": ("lambda_functions", "lambda", "list_functions", "Functions"),
     "-sf": ("step_functions", "stepfunctions", "list_state_machines", "stateMachines"),
@@ -180,16 +172,11 @@ resources_config = {
 DEV FUNCTIONS #1
 --------------------------------------------------------------------------------
 """
-# Inicializar un cliente de AWS Lambda
 lambda_client = boto3.client('lambda')
 
-
-def get_lambda_function_info(function_name):
+def get_lambda_function_simple(function_name):
     try:
-        # Obtener detalles de la función Lambda
         response = lambda_client.get_function(FunctionName=function_name)
-
-        # Extraer y retornar la información relevante
         return {
             'FunctionName': response['Configuration']['FunctionName'],
             'Runtime': response['Configuration']['Runtime'],
@@ -212,26 +199,23 @@ def get_lambda_function_info(function_name):
 DEV FUNCTIONS 2
 --------------------------------------------------------------------------------
 """
-
-import boto3
 from botocore.exceptions import ClientError
 
-# Inicializar clientes de AWS para Lambda, IAM y CloudWatch
 lambda_client = boto3.client('lambda')
 iam_client = boto3.client('iam')
 cloudwatch_client = boto3.client('cloudwatch')
 
-def get_lambda_function_info(function_name):
+def get_lambda_function_multiple(function_name):
     try:
-        # Obtener detalles básicos de la función Lambda
+        # Lambda details
         response = lambda_client.get_function(FunctionName=function_name)
         function_details = response['Configuration']
 
-        # Obtener detalles de la política de IAM
+        # IAM policy details
         role_name = function_details['Role'].split('/')[-1]
         policy = iam_client.get_role_policy(RoleName=role_name, PolicyName=role_name)
 
-        # Obtener métricas de CloudWatch (últimos 14 días por ejemplo)
+        # CloudWatch metrics
         metrics = cloudwatch_client.get_metric_data(
             MetricDataQueries=[
                 {
@@ -253,11 +237,12 @@ def get_lambda_function_info(function_name):
                     'ReturnData': True,
                 },
             ],
-            StartTime='2023-01-01T00:00:00Z',  # Ajusta las fechas según sea necesario
+            # Last 14 days
+            StartTime='2023-01-01T00:00:00Z',
             EndTime='2023-01-14T00:00:00Z',
         )
 
-        # Obtener tags de Lambda
+        # Lambda Tags
         tags = lambda_client.list_tags(Resource=function_details['FunctionArn'])
 
         return {
@@ -269,15 +254,12 @@ def get_lambda_function_info(function_name):
     except ClientError as e:
         return {'Error': str(e)}
 
-
 """
 --------------------------------------------------------------------------------
 FUNCTIONS DEFINITION
 --------------------------------------------------------------------------------
 """
-
-
-# FUNCTION - Devuelve una lista con los recursos del servicio 
+# Return a list of all resources and attributes configured in constants configure section
 def list_aws_resources(client, list_method, response_key, attributes):
     try:
         response = getattr(client, list_method)()
@@ -293,8 +275,6 @@ def list_aws_resources(client, list_method, response_key, attributes):
 HELPER FUNCTIONS
 --------------------------------------------------------------------------------
 """
-
-# FUNCTION - Exporta en formato CSV
 def export_to_csv(data, filename, headers):
     with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
@@ -302,17 +282,14 @@ def export_to_csv(data, filename, headers):
         for row in data:
             writer.writerow(row)
 
-# FUNCTION Crea un nombre unico con timestamp para tener un historico
 def create_unique_filename(base_filename, extension):
     timestamp = datetime.now().strftime("%Y%m%d%H%M")
     return f"{base_filename}_{timestamp}.{extension}"
 
-# FUNCTION - Crea directorio de exportacion
 def create_export_directory(dir_name):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
-# FUNCTION - Comprime archivos CSV en un archivo ZIP
 def zip_files(filenames_list, zip_filename):
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for file in filenames_list:
@@ -323,41 +300,36 @@ def zip_files(filenames_list, zip_filename):
 MAIN FUNCTION
 --------------------------------------------------------------------------------
 """
-# FUNCTION - PRINCIPAL
 def main():
+
     # os.system('cls' if os.name == 'nt' else 'clear') # Limpiar el terminal
-    
-    # Encabezado del terminal 
-    print(console_title)
+    print(CONSOLE_TITLE)
 
-    args = sys.argv[1:] # Obtiene lista de argumentos
-    exported_resources = [] # Crea lista de recursos a exportar
-    create_export_directory(csv_dir_name) # Crea el directorio de exportacon CSV si no existe
-    create_export_directory(zip_dir_name) # Crea el directorio de exportacon ZIP si no existe
+    create_export_directory(CSV_DIR_NAME) 
+    create_export_directory(ZIP_DIR_NAME)
 
-    # Si existe el argumento -all agrega todos los recursos independientemente de los demas argumentos
+    exported_resources = []
+
+    args = sys.argv[1:] 
     if "-all" in args or len(args) == 0:
-        args = resources_config.keys()
+        args = RESOURCES_CONFIG.keys()
    
-    # Bucle principal que itera por los argumentos y servicios configurados
+    # Main loop
     for arg in args:
-        if arg in resources_config:
-            filename, service, list_method, response_key = resources_config[arg] # Obtiene la configuracion del servicio
-            client = clients[service] # Obtiene el cliente del servicio
-            attributes = ATTRIBUTES_CONFIG[service] # Obtiene los atributos del servicio
-            data = list_aws_resources(client, list_method, response_key, attributes) # Obtiene el listado de los recursos del servicio
-            unique_filename =  os.path.join(csv_dir_name, create_unique_filename(filename, 'csv')) # Crea un nombre único con un timestamp
-            export_to_csv(data, unique_filename, attributes) # Exporta el resultado
-            exported_resources.append((unique_filename.split('_')[0],unique_filename)) # agrega un tupla del nombre del recurso y el archivo
+        if arg in RESOURCES_CONFIG:
+            filename, service, list_method, response_key = RESOURCES_CONFIG[arg] 
+            client = CLIENTS[service] 
+            attributes = ATTRIBUTES_CONFIG[service] 
+            data = list_aws_resources(client, list_method, response_key, attributes) 
+            unique_filename =  os.path.join(CSV_DIR_NAME, create_unique_filename(filename, 'csv')) 
+            export_to_csv(data, unique_filename, attributes) 
+            exported_resources.append((unique_filename.split('_')[0],unique_filename)) 
 
-    # Crea lista de recursos exportados
     exported_filename = [resource[1] for resource in exported_resources]
 
-    # Comprime los archivos CSV en ZIP
-    unique_zip_filename = os.path.join(zip_dir_name, create_unique_filename(zip_filename,'zip')) # Genera TimeStamp y concatena con extension de archivo
+    unique_zip_filename = os.path.join(ZIP_DIR_NAME, create_unique_filename(ZIP_FILENAME,'zip'))
     zip_files(exported_filename, unique_zip_filename)
 
-    # Imprime los recursos exportados y el nombre del archivo generado, así como el archivo comprimido
     print("Exported Resources:")
     print("====================\n")
     print("{:<25} {:<10} {:<50}".format("Resource", ">>>", "Exported File"))
@@ -367,50 +339,15 @@ def main():
     print(f"\nAll files compressed at : {unique_zip_filename}")
     print("\n\n")
 
-
 """
 --------------------------------------------------------------------------------
 SCRIPT EXECUTION
 --------------------------------------------------------------------------------
 """
-
 if __name__ == '__main__':
     main()
-
 """
 --------------------------------------------------------------------------------
 End of Script
---------------------------------------------------------------------------------
-"""
-
-
-
-"""
-FUTURE FEATUREs:
-===============
---------------------------------------------------------------------------------
-- FEATURE - Added ability to compress files into ZIP format, with a new argument
-- Possibility to externalize the configuration through a config file, so as not to touch the code.
-- HOTFIX > Fix DMSTask since the TableMappings attribute comes in JSON format.
-    - For the moment it is INACTIVE
-    - It is possible to encode in BASE64, but this would manage file length more efficiently but would affect readability.
-    - Line breaks can be replaced and encoded allowing a direct reading of the CSV, but it will handle the size of the attribute/column data worse.
-    - Add the possibility to add the sub-divisions as new columns (EXAMPLE DMSTasks>ReplicationTaskStats)
-
-Music, Keep Calm & CODE!! - GitHub@RobinGoldwing
-
---------------------------------------------------------------------------------
-"""
-
-
-
-
-
-"""
-NOTES:
---------------------------------------------------------------------------------
-
-# print('>>> for : arg >>>', arg) #### TEST
-
 --------------------------------------------------------------------------------
 """
